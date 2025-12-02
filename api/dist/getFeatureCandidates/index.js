@@ -1,14 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const functions_1 = require("@azure/functions");
 const db_1 = require("../shared/db");
-const DEFAULT_TYPE = 'behavior_feature';
-const DEFAULT_STATUS = 'new';
-async function handler(request, context) {
+const DEFAULT_TYPE = "behavior_feature";
+const DEFAULT_STATUS = "new";
+const getFeatureCandidates = async (context, req) => {
     try {
-        const url = new URL(request.url);
-        const typeParam = url.searchParams.get('type') ?? DEFAULT_TYPE;
-        const statusParam = url.searchParams.get('status') ?? DEFAULT_STATUS;
+        const typeParam = req.query.type ?? DEFAULT_TYPE;
+        const statusParam = req.query.status ?? DEFAULT_STATUS;
         const pool = await (0, db_1.getPool)();
         const query = `
       SELECT TOP (100)
@@ -26,24 +24,26 @@ async function handler(request, context) {
     `;
         const result = await pool
             .request()
-            .input('type', db_1.sqlTypes.VarChar(100), typeParam)
-            .input('status', db_1.sqlTypes.VarChar(100), statusParam)
+            .input("type", db_1.sqlTypes.VarChar(100), typeParam)
+            .input("status", db_1.sqlTypes.VarChar(100), statusParam)
             .query(query);
-        return {
-            jsonBody: result.recordset ?? []
+        context.res = {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+            body: result.recordset ?? []
         };
     }
     catch (err) {
-        context.error('getFeatureCandidates error', err);
-        return {
+        context.log.error("getFeatureCandidates error", err);
+        context.res = {
             status: 500,
-            jsonBody: { message: err instanceof Error ? err.message : 'Failed to load feature candidates' }
+            headers: { "Content-Type": "application/json" },
+            body: {
+                message: err instanceof Error
+                    ? err.message
+                    : "Failed to load feature candidates"
+            }
         };
     }
-}
-functions_1.app.http('getFeatureCandidates', {
-    methods: ['GET'],
-    authLevel: 'anonymous',
-    route: 'getFeatureCandidates',
-    handler
-});
+};
+exports.default = getFeatureCandidates;

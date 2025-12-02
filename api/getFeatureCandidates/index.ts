@@ -1,14 +1,18 @@
-﻿import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { getPool, sqlTypes } from '../shared/db';
+﻿import { AzureFunction, Context, HttpRequest } from "@azure/functions";
+import { getPool, sqlTypes } from "../shared/db";
 
-const DEFAULT_TYPE = 'behavior_feature';
-const DEFAULT_STATUS = 'new';
+const DEFAULT_TYPE = "behavior_feature";
+const DEFAULT_STATUS = "new";
 
-async function handler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+const getFeatureCandidates: AzureFunction = async (
+  context: Context,
+  req: HttpRequest
+): Promise<void> => {
   try {
-    const url = new URL(request.url);
-    const typeParam = url.searchParams.get('type') ?? DEFAULT_TYPE;
-    const statusParam = url.searchParams.get('status') ?? DEFAULT_STATUS;
+    const typeParam =
+      (req.query.type as string | undefined) ?? DEFAULT_TYPE;
+    const statusParam =
+      (req.query.status as string | undefined) ?? DEFAULT_STATUS;
 
     const pool = await getPool();
     const query = `
@@ -28,25 +32,28 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
 
     const result = await pool
       .request()
-      .input('type', sqlTypes.VarChar(100), typeParam)
-      .input('status', sqlTypes.VarChar(100), statusParam)
+      .input("type", sqlTypes.VarChar(100), typeParam)
+      .input("status", sqlTypes.VarChar(100), statusParam)
       .query(query);
 
-    return {
-      jsonBody: result.recordset ?? []
+    context.res = {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+      body: result.recordset ?? []
     };
   } catch (err) {
-    context.error('getFeatureCandidates error', err);
-    return {
+    context.log.error("getFeatureCandidates error", err as any);
+    context.res = {
       status: 500,
-      jsonBody: { message: err instanceof Error ? err.message : 'Failed to load feature candidates' }
+      headers: { "Content-Type": "application/json" },
+      body: {
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to load feature candidates"
+      }
     };
   }
-}
+};
 
-app.http('getFeatureCandidates', {
-  methods: ['GET'],
-  authLevel: 'anonymous',
-  route: 'getFeatureCandidates',
-  handler
-});
+export default getFeatureCandidates;

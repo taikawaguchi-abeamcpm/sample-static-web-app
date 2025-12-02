@@ -1,38 +1,46 @@
-﻿import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { getPool, sqlTypes } from '../shared/db';
+﻿import { AzureFunction, Context, HttpRequest } from "@azure/functions";
+import { getPool, sqlTypes } from "../shared/db";
 
-type Action = 'adopt' | 'reject';
+type Action = "adopt" | "reject";
 
-async function handler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+const updateFeatureCandidate: AzureFunction = async (
+  context: Context,
+  req: HttpRequest
+): Promise<void> => {
   let payload: { candidate_id?: string; action?: Action } | null = null;
+
   try {
-    payload = (await request.json()) as { candidate_id?: string; action?: Action };
+    payload = (req.body ?? null) as { candidate_id?: string; action?: Action } | null;
   } catch (err) {
-    context.warn('Failed to parse update payload', err);
+    context.log.warn("Failed to parse update payload", err as any);
   }
 
   if (!payload?.candidate_id || !payload?.action) {
-    return {
+    context.res = {
       status: 400,
-      jsonBody: { message: 'candidate_id and action are required.' }
+      headers: { "Content-Type": "application/json" },
+      body: { message: "candidate_id and action are required." }
     };
+    return;
   }
 
-  if (!['adopt', 'reject'].includes(payload.action)) {
-    return {
+  if (!["adopt", "reject"].includes(payload.action)) {
+    context.res = {
       status: 400,
-      jsonBody: { message: 'action must be "adopt" or "reject"' }
+      headers: { "Content-Type": "application/json" },
+      body: { message: 'action must be "adopt" or "reject"' }
     };
+    return;
   }
 
-  const nextStatus = payload.action === 'adopt' ? 'adopted' : 'rejected';
+  const nextStatus = payload.action === "adopt" ? "adopted" : "rejected";
 
   try {
     const pool = await getPool();
     const result = await pool
       .request()
-      .input('candidate_id', sqlTypes.VarChar(100), payload.candidate_id)
-      .input('status', sqlTypes.VarChar(50), nextStatus)
+      .input("candidate_id", sqlTypes.VarChar(100), payload.candidate_id)
+      .input("status", sqlTypes.VarChar(50), nextStatus)
       .query(`
         UPDATE feature_candidates
         SET status = @status
@@ -40,30 +48,34 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
         SELECT @@ROWCOUNT AS affected;
       `);
 
-    const affected = result.rowsAffected?.[0] ?? result.recordset?.[0]?.affected ?? 0;
+    const affected =
+      result.rowsAffected?.[0] ?? result.recordset?.[0]?.affected ?? 0;
 
     if (!affected) {
-      return {
+      context.res = {
         status: 404,
-        jsonBody: { message: 'Candidate not found.' }
+        headers: { "Content-Type": "application/json" },
+        body: { message: "Candidate not found." }
       };
+      return;
     }
 
-    return {
-      jsonBody: { candidate_id: payload.candidate_id, status: nextStatus }
+    context.res = {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+      body: { candidate_id: payload.candidate_id, status: nextStatus }
     };
   } catch (err) {
-    context.error('updateFeatureCandidate error', err);
-    return {
+    context.log.error("updateFeatureCandidate error", err as any);
+    context.res = {
       status: 500,
-      jsonBody: { message: err instanceof Error ? err.message : 'Failed to update candidate' }
+      headers: { "Content-Type": "application/json" },
+      body: {
+        message:
+          err instanceof Error ? err.message : "Failed to update candidate"
+      }
     };
   }
-}
+};
 
-app.http('updateFeatureCandidate', {
-  methods: ['POST'],
-  authLevel: 'anonymous',
-  route: 'updateFeatureCandidate',
-  handler
-});
+export default updateFeatureCandidate;
