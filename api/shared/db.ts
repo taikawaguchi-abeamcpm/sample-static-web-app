@@ -1,13 +1,15 @@
 ﻿import sql from "mssql";
-import { DefaultAzureCredential } from "@azure/identity";
+import { ClientSecretCredential } from "@azure/identity";
 
 let pool: sql.ConnectionPool | null = null;
 
-// Azure SQL / Fabric SQL 用のスコープ
 const SQL_SCOPE = "https://database.windows.net/.default";
 
-// SWA のマネージド ID またはローカルのログイン情報を使う
-const credential = new DefaultAzureCredential();
+const tenantId = process.env.AZURE_TENANT_ID!;
+const clientId = process.env.AZURE_CLIENT_ID!;
+const clientSecret = process.env.AZURE_CLIENT_SECRET!;
+
+const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
 
 async function getToken(): Promise<string> {
   const tokenResponse = await credential.getToken(SQL_SCOPE);
@@ -34,14 +36,13 @@ async function getConfig(): Promise<sql.config> {
       encrypt: true,
       trustServerCertificate: true
     },
-    // mssql / tedious の AAD アクセストークン認証
     authentication: {
       type: "azure-active-directory-access-token",
       options: {
         token: accessToken
       }
     }
-  } as any; // authentication の型が少しゆるいので any キャスト
+  } as any;
 }
 
 export async function getPool(): Promise<sql.ConnectionPool> {
