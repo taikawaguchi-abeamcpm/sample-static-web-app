@@ -1,15 +1,12 @@
 ﻿import sql from "mssql";
-import { ClientSecretCredential } from "@azure/identity";
+import { DefaultAzureCredential } from "@azure/identity";
 
 let pool: sql.ConnectionPool | null = null;
 
+// Azure SQL / Fabric SQL 用のスコープ
 const SQL_SCOPE = "https://database.windows.net/.default";
 
-const tenantId = process.env.AZURE_TENANT_ID!;
-const clientId = process.env.AZURE_CLIENT_ID!;
-const clientSecret = process.env.AZURE_CLIENT_SECRET!;
-
-const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+const credential = new DefaultAzureCredential();
 
 async function getToken(): Promise<string> {
   const tokenResponse = await credential.getToken(SQL_SCOPE);
