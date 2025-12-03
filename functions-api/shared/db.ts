@@ -1,22 +1,22 @@
 ﻿import sql from "mssql";
-import { DefaultAzureCredential } from "@azure/identity";
+import { ManagedIdentityCredential } from "@azure/identity";
 
 let pool: sql.ConnectionPool | null = null;
 
-// Azure SQL / Fabric SQL 用のスコープ
+// Fabric SQL / Azure SQL / Synapse / Fabric Warehouse で共通のスコープ
 const SQL_SCOPE = "https://database.windows.net/.default";
 
-const credential = new DefaultAzureCredential();
+const credential = new ManagedIdentityCredential();
 
-async function getToken(): Promise<string> {
-  const tokenResponse = await credential.getToken(SQL_SCOPE);
-  if (!tokenResponse?.token) {
+async function getAccessToken(): Promise<string> {
+  const token = await credential.getToken(SQL_SCOPE);
+  if (!token?.token) {
     throw new Error("Failed to acquire access token for SQL");
   }
-  return tokenResponse.token;
+  return token.token;
 }
 
-async function getConfig(): Promise<sql.config> {
+async function buildConfig(): Promise<sql.config> {
   const server = process.env.FABRIC_SQL_SERVER;
   const database = process.env.FABRIC_DATABASE;
 
@@ -24,21 +24,22 @@ async function getConfig(): Promise<sql.config> {
     throw new Error("FABRIC_SQL_SERVER / FABRIC_DATABASE are not set");
   }
 
-  const accessToken = await getToken();
+  const accessToken = await getAccessToken();
 
   return {
     server,
     database,
+    port: 1433,
     options: {
       encrypt: true,
-      trustServerCertificate: true
+      trustServerCertificate: true,
     },
     authentication: {
       type: "azure-active-directory-access-token",
       options: {
-        token: accessToken
-      }
-    }
+        token: accessToken,
+      },
+    },
   } as any;
 }
 
@@ -47,7 +48,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     return pool;
   }
 
-  const config = await getConfig();
+  const config = await buildConfig();
   pool = new sql.ConnectionPool(config);
   pool.on("error", (err: Error) => {
     console.error("SQL pool error", err);

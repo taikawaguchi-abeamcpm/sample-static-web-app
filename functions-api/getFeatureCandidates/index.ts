@@ -42,17 +42,18 @@ const getFeatureCandidates: AzureFunction = async (
       body: result.recordset ?? []
     };
   } catch (err) {
+    const anyErr = err as any;
     context.log.error("getFeatureCandidates error", err as any);
     context.res = {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-      body: {
-        message:
-          err instanceof Error
-            ? err.message
-            : "Failed to load feature candidates"
-      }
-    };
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+    body: {
+      message: anyErr?.message ?? "Failed to get candidate",
+      code: anyErr?.code,
+      errno: anyErr?.errno,
+      name: anyErr?.name
+    }
+  };
   }
 };
 
