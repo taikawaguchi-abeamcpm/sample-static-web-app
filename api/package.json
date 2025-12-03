@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "feature-candidate-api",
   "version": "1.0.0",
   "private": true,
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@azure/functions": "3.5.1",
+    "@azure/identity": "^4.13.0",
     "mssql": "^10.0.2"
   },
   "devDependencies": {
