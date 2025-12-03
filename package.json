@@ -6,12 +6,8 @@
   "description": "Feature candidate review tool for Microsoft Fabric",
   "main": "index.js",
   "scripts": {
-    "dev": "npm-run-all --parallel dev:client dev:api",
-    "dev:client": "vite",
-    "dev:api": "npm run start --prefix api",
-    "build": "npm-run-all build:client build:api",
-    "build:client": "vite build",
-    "build:api": "npm run build --prefix api",
+    "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "repository": {
