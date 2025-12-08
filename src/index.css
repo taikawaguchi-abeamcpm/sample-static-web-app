@@ -175,6 +175,15 @@ tbody tr:hover {
   border-radius: 0.5rem;
 }
 
+.info-box {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  color: #0ea5e9;
+  border-radius: 0.5rem;
+}
+
 .spinner {
   animation: rotate 1s linear infinite;
   display: inline-block;

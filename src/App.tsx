@@ -1,5 +1,5 @@
-﻿import { useCallback, useEffect, useState } from 'react';
-import { fetchFeatureCandidates, updateFeatureCandidate } from './api';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchFeatureCandidates, generateTagCandidates, updateFeatureCandidate } from './api';
 import type { CandidateStatus, CandidateType, FeatureCandidate } from './types';
 
 const typeOptions: CandidateType[] = ['behavior_feature', 'tag', 'score'];
@@ -26,6 +26,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const loadCandidates = useCallback(async () => {
     setError(null);
@@ -43,6 +45,22 @@ export default function App() {
       setLoading(false);
     }
   }, [statusFilter, typeFilter]);
+
+  const handleGenerateTags = async () => {
+    setError(null);
+    setInfoMessage(null);
+    setGenerating(true);
+    try {
+      const res = await generateTagCandidates();
+      setInfoMessage(res.message || 'タグ候補生成をトリガーしました。');
+      await loadCandidates();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Failed to trigger tag generation');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   useEffect(() => {
     loadCandidates();
@@ -123,6 +141,17 @@ export default function App() {
             {loading ? 'Loading...' : 'Search'}
           </button>
         </label>
+        <label>
+          &nbsp;
+          <button
+            className="primary"
+            onClick={handleGenerateTags}
+            disabled={generating || loading || typeFilter !== 'tag'}
+            title={typeFilter !== 'tag' ? 'Type を tag にすると有効化されます' : 'タグ候補生成をトリガーします'}
+          >
+            {generating ? '生成中...' : 'タグ候補生成'}
+          </button>
+        </label>
       </div>
 
       <div className="table-wrapper">
@@ -176,6 +205,7 @@ export default function App() {
         <div className="detail-panel">{detailPanel}</div>
       </div>
 
+      {infoMessage && <div className="info-box">{infoMessage}</div>}
       {error && <div className="error-box">{error}</div>}
     </div>
   );

@@ -22,6 +22,31 @@ export async function fetchFeatureCandidates(params: FetchParams): Promise<Featu
   return payload;
 }
 
+export interface GenerateTagOptions {
+  sample_size?: number;
+  max_candidates?: number;
+  min_candidates?: number;
+}
+
+export async function generateTagCandidates(body: GenerateTagOptions = {}) {
+  const res = await fetch(`${API_BASE}/generateTagCandidates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to trigger tag generation (${res.status})`);
+  }
+
+  return (await res.json()) as {
+    message: string;
+    upstream_status?: number;
+    upstream_response?: string;
+  };
+}
+
 export async function updateFeatureCandidate(data: UpdateCandidatePayload) {
   const res = await fetch(`${API_BASE}/updateFeatureCandidate`, {
     method: 'POST',
