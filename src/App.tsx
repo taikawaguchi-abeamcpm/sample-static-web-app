@@ -412,7 +412,7 @@ export default function App() {
     <>
       <div className="filters">
         <label>
-          アカウントID
+          企業ID
           <input value={accountIdFilter} onChange={(e) => setAccountIdFilter(e.target.value)} placeholder="任意" />
         </label>
         <label>
@@ -452,15 +452,15 @@ export default function App() {
         {accountViewType === 'tag' ? (
           <div className="table-card">
             <div className="card-header">
-              <h3>アカウントタグ</h3>
+              <h3>企業タグ</h3>
             </div>
             <div className="table-scroll compact">
               <table>
                 <thead>
                   <tr>
-                    <th>アカウント名</th>
-                    <th>タグ名</th>
-                    <th>値</th>
+                    <th>企業名</th>
+                    <th>タグ</th>
+                    <th>判断材料となった活動</th>
                     <th>信頼度</th>
                     <th>作成日時</th>
                   </tr>
@@ -490,7 +490,7 @@ export default function App() {
         ) : (
           <div className="table-card">
             <div className="card-header">
-              <h3>アカウントスコア</h3>
+              <h3>企業スコア</h3>
             </div>
             {renderDynamicTable(accountScoreTable, 'スコアの評価がありません。')}
           </div>
@@ -501,20 +501,20 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <h1>AIターゲット コンソール</h1>
+      <h1>AI Targeting Platform</h1>
 
       <div className="tab-bar">
         <button className={`tab-button ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>
-          候補レビュー
+          タグ・スコア候補レビュー
         </button>
         <button className={`tab-button ${activeTab === 'masters' ? 'active' : ''}`} onClick={() => setActiveTab('masters')}>
-          タグ/スコア マスター
+          タグ/スコア マスタ
         </button>
         <button
           className={`tab-button ${activeTab === 'account-evals' ? 'active' : ''}`}
           onClick={() => setActiveTab('account-evals')}
         >
-          アカウント評価
+          企業分析結果
         </button>
       </div>
 
