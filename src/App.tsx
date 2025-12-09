@@ -65,6 +65,8 @@ export default function App() {
   const [masterLoading, setMasterLoading] = useState(false);
   const [masterType, setMasterType] = useState<'tag' | 'score'>('tag');
   const [masterSaving, setMasterSaving] = useState(false);
+  const [showTagAccordion, setShowTagAccordion] = useState(false);
+  const [showScoreAccordion, setShowScoreAccordion] = useState(false);
   const [tagCreateForm, setTagCreateForm] = useState({ tag_name: '', description: '' });
   const [tagEditForm, setTagEditForm] = useState({ tag_name: '', description: '' });
   const [selectedTagId, setSelectedTagId] = useState('');
@@ -115,7 +117,7 @@ export default function App() {
     }
   }, []);
 
-  const loadAccountEvaluations = useCallback(async () => {
+  const loadAccountEvaluations = async () => {
     setError(null);
     setAccountLoading(true);
     try {
@@ -138,7 +140,7 @@ export default function App() {
     } finally {
       setAccountLoading(false);
     }
-  }, [accountLimit, accountNameFilter, scoreNameFilter, tagNameFilter]);
+  };
 
   const handleGenerateTags = async () => {
     setError(null);
@@ -168,7 +170,7 @@ export default function App() {
     } else if (activeTab === 'account-evals') {
       loadAccountEvaluations();
     }
-  }, [activeTab, loadAccountEvaluations, loadMasterData]);
+  }, [activeTab, loadMasterData]);
 
   useEffect(() => {
     setError(null);
@@ -571,70 +573,78 @@ export default function App() {
         ) : masterType === 'tag' ? (
           <>
             <div className="form-block">
-              <h4>タグ新規登録</h4>
-              <div className="form-grid">
-                <label>
-                  タグ名称 *
-                  <input
-                    value={tagCreateForm.tag_name}
-                    onChange={(e) => setTagCreateForm({ ...tagCreateForm, tag_name: e.target.value })}
-                    placeholder="画面表示用の名称"
-                  />
-                </label>
-                <label className="wide">
-                  説明
-                  <textarea
-                    rows={2}
-                    value={tagCreateForm.description}
-                    onChange={(e) => setTagCreateForm({ ...tagCreateForm, description: e.target.value })}
-                  />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="primary" onClick={handleCreateTagMaster} disabled={masterSaving}>
-                  {masterSaving ? '処理中...' : '登録'}
+              <div className="accordion-header">
+                <h4>タグ登録 / 更新</h4>
+                <button className="secondary" onClick={() => setShowTagAccordion((v) => !v)}>
+                  {showTagAccordion ? '閉じる' : '開く'}
                 </button>
               </div>
-            </div>
+              {showTagAccordion && (
+                <>
+                  <div className="form-grid">
+                    <label>
+                      タグ名称 *
+                      <input
+                        value={tagCreateForm.tag_name}
+                        onChange={(e) => setTagCreateForm({ ...tagCreateForm, tag_name: e.target.value })}
+                        placeholder="画面表示用の名称"
+                      />
+                    </label>
+                    <label className="wide">
+                      説明
+                      <textarea
+                        rows={2}
+                        value={tagCreateForm.description}
+                        onChange={(e) => setTagCreateForm({ ...tagCreateForm, description: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <button className="primary" onClick={handleCreateTagMaster} disabled={masterSaving}>
+                      {masterSaving ? '処理中...' : '登録'}
+                    </button>
+                  </div>
 
-            <div className="form-block">
-              <h4>タグ更新 / 削除（名称・説明のみ）</h4>
-              <label>
-                対象タグ
-                <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)}>
-                  <option value="">選択してください</option>
-                  {tagDefinitions.map((tag) => (
-                    <option key={tag.tag_id} value={tag.tag_id}>
-                      {tag.tag_name} ({tag.tag_id})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="form-grid">
-                <label>
-                  名称
-                  <input
-                    value={tagEditForm.tag_name}
-                    onChange={(e) => setTagEditForm({ ...tagEditForm, tag_name: e.target.value })}
-                  />
-                </label>
-                <label className="wide">
-                  説明
-                  <textarea
-                    rows={2}
-                    value={tagEditForm.description}
-                    onChange={(e) => setTagEditForm({ ...tagEditForm, description: e.target.value })}
-                  />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="primary" onClick={handleUpdateTagMaster} disabled={!selectedTagId || masterSaving}>
-                  {masterSaving ? '処理中...' : '更新'}
-                </button>
-                <button className="danger" onClick={handleDeleteTagMaster} disabled={!selectedTagId || masterSaving}>
-                  削除
-                </button>
-              </div>
+                  <div className="divider" />
+
+                  <label>
+                    対象タグ
+                    <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)}>
+                      <option value="">選択してください</option>
+                      {tagDefinitions.map((tag) => (
+                        <option key={tag.tag_id} value={tag.tag_id}>
+                          {tag.tag_name} ({tag.tag_id})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="form-grid">
+                    <label>
+                      名称
+                      <input
+                        value={tagEditForm.tag_name}
+                        onChange={(e) => setTagEditForm({ ...tagEditForm, tag_name: e.target.value })}
+                      />
+                    </label>
+                    <label className="wide">
+                      説明
+                      <textarea
+                        rows={2}
+                        value={tagEditForm.description}
+                        onChange={(e) => setTagEditForm({ ...tagEditForm, description: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <button className="primary" onClick={handleUpdateTagMaster} disabled={!selectedTagId || masterSaving}>
+                      {masterSaving ? '処理中...' : '更新'}
+                    </button>
+                    <button className="danger" onClick={handleDeleteTagMaster} disabled={!selectedTagId || masterSaving}>
+                      削除
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {tagDefinitions.length === 0 ? (
@@ -667,70 +677,78 @@ export default function App() {
         ) : (
           <>
             <div className="form-block">
-              <h4>スコア新規登録</h4>
-              <div className="form-grid">
-                <label>
-                  スコア名称 *
-                  <input
-                    value={scoreCreateForm.score_name}
-                    onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, score_name: e.target.value })}
-                    placeholder="画面表示用の名称"
-                  />
-                </label>
-                <label className="wide">
-                  説明
-                  <textarea
-                    rows={2}
-                    value={scoreCreateForm.description}
-                    onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, description: e.target.value })}
-                  />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="primary" onClick={handleCreateScoreMaster} disabled={masterSaving}>
-                  {masterSaving ? '処理中...' : '登録'}
+              <div className="accordion-header">
+                <h4>スコア登録 / 更新</h4>
+                <button className="secondary" onClick={() => setShowScoreAccordion((v) => !v)}>
+                  {showScoreAccordion ? '閉じる' : '開く'}
                 </button>
               </div>
-            </div>
+              {showScoreAccordion && (
+                <>
+                  <div className="form-grid">
+                    <label>
+                      スコア名称 *
+                      <input
+                        value={scoreCreateForm.score_name}
+                        onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, score_name: e.target.value })}
+                        placeholder="画面表示用の名称"
+                      />
+                    </label>
+                    <label className="wide">
+                      説明
+                      <textarea
+                        rows={2}
+                        value={scoreCreateForm.description}
+                        onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, description: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <button className="primary" onClick={handleCreateScoreMaster} disabled={masterSaving}>
+                      {masterSaving ? '処理中...' : '登録'}
+                    </button>
+                  </div>
 
-            <div className="form-block">
-              <h4>スコア更新 / 削除（名称・説明のみ）</h4>
-              <label>
-                対象スコア
-                <select value={selectedScoreId} onChange={(e) => setSelectedScoreId(e.target.value)}>
-                  <option value="">選択してください</option>
-                  {scoreDefinitions.map((score) => (
-                    <option key={score.score_id} value={score.score_id}>
-                      {score.score_name} ({score.score_id})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="form-grid">
-                <label>
-                  名称
-                  <input
-                    value={scoreEditForm.score_name}
-                    onChange={(e) => setScoreEditForm({ ...scoreEditForm, score_name: e.target.value })}
-                  />
-                </label>
-                <label className="wide">
-                  説明
-                  <textarea
-                    rows={2}
-                    value={scoreEditForm.description}
-                    onChange={(e) => setScoreEditForm({ ...scoreEditForm, description: e.target.value })}
-                  />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="primary" onClick={handleUpdateScoreMaster} disabled={!selectedScoreId || masterSaving}>
-                  {masterSaving ? '処理中...' : '更新'}
-                </button>
-                <button className="danger" onClick={handleDeleteScoreMaster} disabled={!selectedScoreId || masterSaving}>
-                  削除
-                </button>
-              </div>
+                  <div className="divider" />
+
+                  <label>
+                    対象スコア
+                    <select value={selectedScoreId} onChange={(e) => setSelectedScoreId(e.target.value)}>
+                      <option value="">選択してください</option>
+                      {scoreDefinitions.map((score) => (
+                        <option key={score.score_id} value={score.score_id}>
+                          {score.score_name} ({score.score_id})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="form-grid">
+                    <label>
+                      名称
+                      <input
+                        value={scoreEditForm.score_name}
+                        onChange={(e) => setScoreEditForm({ ...scoreEditForm, score_name: e.target.value })}
+                      />
+                    </label>
+                    <label className="wide">
+                      説明
+                      <textarea
+                        rows={2}
+                        value={scoreEditForm.description}
+                        onChange={(e) => setScoreEditForm({ ...scoreEditForm, description: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="form-actions">
+                    <button className="primary" onClick={handleUpdateScoreMaster} disabled={!selectedScoreId || masterSaving}>
+                      {masterSaving ? '処理中...' : '更新'}
+                    </button>
+                    <button className="danger" onClick={handleDeleteScoreMaster} disabled={!selectedScoreId || masterSaving}>
+                      削除
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {scoreDefinitions.length === 0 ? (
