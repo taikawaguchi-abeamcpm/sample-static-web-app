@@ -291,6 +291,63 @@ tbody tr:hover {
   margin-bottom: 0.5rem;
 }
 
+.form-block {
+  border: 1px solid #e5e7f0;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: #f9fafb;
+}
+
+.form-block h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.form-block > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-block > label select {
+  width: 100%;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.form-grid label input,
+.form-grid label textarea {
+  width: 100%;
+}
+
+.form-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 .status-badge {
   padding: 0.25rem 0.5rem;
   border-radius: 999px;

@@ -102,6 +102,116 @@ export async function fetchScoreDefinitions(params: MasterQuery = {}): Promise<S
   return (await res.json()) as ScoreDefinition[];
 }
 
+export interface CreateTagPayload {
+  tag_name: string;
+  tag_code?: string;
+  description?: string;
+  is_multi_valued?: boolean;
+  value_type?: string;
+  source_type?: string;
+}
+
+export async function createTagDefinition(payload: CreateTagPayload) {
+  const res = await fetch(`${API_BASE}/createTagDefinition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to create tag (${res.status})`);
+  }
+  return (await res.json()) as TagDefinition;
+}
+
+export interface UpdateTagPayload {
+  tag_id: string;
+  tag_name?: string;
+  description?: string;
+}
+
+export async function updateTagDefinition(payload: UpdateTagPayload) {
+  const res = await fetch(`${API_BASE}/updateTagDefinition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to update tag (${res.status})`);
+  }
+  return (await res.json()) as TagDefinition;
+}
+
+export async function deleteTagDefinition(tag_id: string) {
+  const res = await fetch(`${API_BASE}/deleteTagDefinition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tag_id })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to delete tag (${res.status})`);
+  }
+  return (await res.json()) as { tag_id: string; status: string };
+}
+
+export interface CreateScorePayload {
+  score_name: string;
+  score_code?: string;
+  description?: string;
+  min_value?: number;
+  max_value?: number;
+  direction?: string;
+  source_type?: string;
+  refresh_interval?: string | number;
+}
+
+export async function createScoreDefinition(payload: CreateScorePayload) {
+  const res = await fetch(`${API_BASE}/createScoreDefinition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to create score (${res.status})`);
+  }
+  return (await res.json()) as ScoreDefinition;
+}
+
+export interface UpdateScorePayload {
+  score_id: string;
+  score_name?: string;
+  description?: string;
+}
+
+export async function updateScoreDefinition(payload: UpdateScorePayload) {
+  const res = await fetch(`${API_BASE}/updateScoreDefinition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to update score (${res.status})`);
+  }
+  return (await res.json()) as ScoreDefinition;
+}
+
+export async function deleteScoreDefinition(score_id: string) {
+  const res = await fetch(`${API_BASE}/deleteScoreDefinition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ score_id })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to delete score (${res.status})`);
+  }
+  return (await res.json()) as { score_id: string; status: string };
+}
+
 export interface AccountQueryParams {
   account_id?: string;
   account_name?: string;

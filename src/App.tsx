@@ -3,9 +3,15 @@ import {
   fetchAccountScores,
   fetchAccountTags,
   fetchFeatureCandidates,
+  createScoreDefinition,
+  createTagDefinition,
+  deleteScoreDefinition,
+  deleteTagDefinition,
   fetchScoreDefinitions,
   fetchTagDefinitions,
   generateTagCandidates,
+  updateTagDefinition,
+  updateScoreDefinition,
   updateFeatureCandidate
 } from './api';
 import type {
@@ -58,6 +64,13 @@ export default function App() {
   const [scoreDefinitions, setScoreDefinitions] = useState<ScoreDefinition[]>([]);
   const [masterLoading, setMasterLoading] = useState(false);
   const [masterType, setMasterType] = useState<'tag' | 'score'>('tag');
+  const [masterSaving, setMasterSaving] = useState(false);
+  const [tagCreateForm, setTagCreateForm] = useState({ tag_name: '', tag_code: '', description: '' });
+  const [tagEditForm, setTagEditForm] = useState({ tag_name: '', description: '' });
+  const [selectedTagId, setSelectedTagId] = useState('');
+  const [scoreCreateForm, setScoreCreateForm] = useState({ score_name: '', score_code: '', description: '' });
+  const [scoreEditForm, setScoreEditForm] = useState({ score_name: '', description: '' });
+  const [selectedScoreId, setSelectedScoreId] = useState('');
 
   const [accountNameFilter, setAccountNameFilter] = useState('');
   const [tagNameFilter, setTagNameFilter] = useState('');
@@ -161,6 +174,40 @@ export default function App() {
     setError(null);
   }, [activeTab]);
 
+  useEffect(() => {
+    if (tagDefinitions.length && !selectedTagId) {
+      const first = tagDefinitions[0];
+      setSelectedTagId(first.tag_id);
+      setTagEditForm({ tag_name: first.tag_name || '', description: first.description ?? '' });
+    }
+  }, [selectedTagId, tagDefinitions]);
+
+  useEffect(() => {
+    const target = tagDefinitions.find((t) => t.tag_id === selectedTagId);
+    if (target) {
+      setTagEditForm({ tag_name: target.tag_name || '', description: target.description ?? '' });
+    } else {
+      setTagEditForm({ tag_name: '', description: '' });
+    }
+  }, [selectedTagId, tagDefinitions]);
+
+  useEffect(() => {
+    if (scoreDefinitions.length && !selectedScoreId) {
+      const first = scoreDefinitions[0];
+      setSelectedScoreId(first.score_id);
+      setScoreEditForm({ score_name: first.score_name || '', description: first.description ?? '' });
+    }
+  }, [scoreDefinitions, selectedScoreId]);
+
+  useEffect(() => {
+    const target = scoreDefinitions.find((s) => s.score_id === selectedScoreId);
+    if (target) {
+      setScoreEditForm({ score_name: target.score_name || '', description: target.description ?? '' });
+    } else {
+      setScoreEditForm({ score_name: '', description: '' });
+    }
+  }, [scoreDefinitions, selectedScoreId]);
+
   const handleAction = async (action: 'adopt' | 'reject') => {
     if (!selectedCandidate) return;
     setUpdating(true);
@@ -173,6 +220,184 @@ export default function App() {
       setError(err instanceof Error ? err.message : '候補の更新に失敗しました');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleCreateTagMaster = async () => {
+    const tag_name = tagCreateForm.tag_name.trim();
+    const tag_code = tagCreateForm.tag_code.trim();
+    const description = tagCreateForm.description.trim();
+
+    if (!tag_name) {
+      setError('タグ名称を入力してください');
+      return;
+    }
+
+    setMasterSaving(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await createTagDefinition({
+        tag_name,
+        tag_code: tag_code || undefined,
+        description: description || undefined,
+        value_type: 'string',
+        source_type: 'manual',
+        is_multi_valued: false
+      });
+      setInfoMessage('タグを登録しました');
+      setTagCreateForm({ tag_name: '', tag_code: '', description: '' });
+      await loadMasterData();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'タグの登録に失敗しました');
+    } finally {
+      setMasterSaving(false);
+    }
+  };
+
+  const handleUpdateTagMaster = async () => {
+    if (!selectedTagId) {
+      setError('更新するタグを選択してください');
+      return;
+    }
+    const tag_name = tagEditForm.tag_name.trim();
+    const description = tagEditForm.description.trim();
+    if (!tag_name && !description) {
+      setError('名称または説明を入力してください');
+      return;
+    }
+
+    setMasterSaving(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await updateTagDefinition({
+        tag_id: selectedTagId,
+        tag_name: tag_name || undefined,
+        description: description || undefined
+      });
+      setInfoMessage('タグを更新しました');
+      await loadMasterData();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'タグの更新に失敗しました');
+    } finally {
+      setMasterSaving(false);
+    }
+  };
+
+  const handleDeleteTagMaster = async () => {
+    if (!selectedTagId) {
+      setError('削除するタグを選択してください');
+      return;
+    }
+    if (!window.confirm('選択中のタグを削除しますか？')) {
+      return;
+    }
+    setMasterSaving(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await deleteTagDefinition(selectedTagId);
+      setInfoMessage('タグを削除しました');
+      setSelectedTagId('');
+      setTagEditForm({ tag_name: '', description: '' });
+      await loadMasterData();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'タグの削除に失敗しました');
+    } finally {
+      setMasterSaving(false);
+    }
+  };
+
+  const handleCreateScoreMaster = async () => {
+    const score_name = scoreCreateForm.score_name.trim();
+    const score_code = scoreCreateForm.score_code.trim();
+    const description = scoreCreateForm.description.trim();
+
+    if (!score_name) {
+      setError('スコア名称を入力してください');
+      return;
+    }
+
+    setMasterSaving(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await createScoreDefinition({
+        score_name,
+        score_code: score_code || undefined,
+        description: description || undefined,
+        direction: 'higher_is_better',
+        source_type: 'manual'
+      });
+      setInfoMessage('スコアを登録しました');
+      setScoreCreateForm({ score_name: '', score_code: '', description: '' });
+      await loadMasterData();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'スコアの登録に失敗しました');
+    } finally {
+      setMasterSaving(false);
+    }
+  };
+
+  const handleUpdateScoreMaster = async () => {
+    if (!selectedScoreId) {
+      setError('更新するスコアを選択してください');
+      return;
+    }
+    const score_name = scoreEditForm.score_name.trim();
+    const description = scoreEditForm.description.trim();
+    if (!score_name && !description) {
+      setError('名称または説明を入力してください');
+      return;
+    }
+
+    setMasterSaving(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await updateScoreDefinition({
+        score_id: selectedScoreId,
+        score_name: score_name || undefined,
+        description: description || undefined
+      });
+      setInfoMessage('スコアを更新しました');
+      await loadMasterData();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'スコアの更新に失敗しました');
+    } finally {
+      setMasterSaving(false);
+    }
+  };
+
+  const handleDeleteScoreMaster = async () => {
+    if (!selectedScoreId) {
+      setError('削除するスコアを選択してください');
+      return;
+    }
+    if (!window.confirm('選択中のスコアを削除しますか？')) {
+      return;
+    }
+
+    setMasterSaving(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      await deleteScoreDefinition(selectedScoreId);
+      setInfoMessage('スコアを削除しました');
+      setSelectedScoreId('');
+      setScoreEditForm({ score_name: '', description: '' });
+      await loadMasterData();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'スコアの削除に失敗しました');
+    } finally {
+      setMasterSaving(false);
     }
   };
 
@@ -334,7 +559,7 @@ export default function App() {
     <div className="section-grid">
       <div className="table-card">
         <div className="card-header">
-          <h3>マスター一覧</h3>
+          <h3>タグ/スコア マスター</h3>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <select value={masterType} onChange={(e) => setMasterType(e.target.value as 'tag' | 'score')}>
               <option value="tag">タグ</option>
@@ -348,61 +573,217 @@ export default function App() {
         {masterLoading ? (
           <div className="empty-state">マスターを読込中...</div>
         ) : masterType === 'tag' ? (
-          tagDefinitions.length === 0 ? (
-            <div className="empty-state">タグが見つかりません。</div>
-          ) : (
-            <div className="table-scroll compact">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>名称</th>
-                    <th>説明</th>
-                    <th>作成日時</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tagDefinitions.map((tag) => (
-                    <tr key={tag.tag_id}>
-                      <td>{tag.tag_id}</td>
-                      <td>{tag.tag_name}</td>
-                      <td>{tag.description || '-'}</td>
-                      <td>{formatDate(tag.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <>
+            <div className="form-block">
+              <h4>タグ新規登録</h4>
+              <div className="form-grid">
+                <label>
+                  タグコード
+                  <input
+                    value={tagCreateForm.tag_code}
+                    onChange={(e) => setTagCreateForm({ ...tagCreateForm, tag_code: e.target.value })}
+                    placeholder="例: recent_purchase"
+                  />
+                </label>
+                <label>
+                  タグ名称 *
+                  <input
+                    value={tagCreateForm.tag_name}
+                    onChange={(e) => setTagCreateForm({ ...tagCreateForm, tag_name: e.target.value })}
+                    placeholder="画面表示用の名称"
+                  />
+                </label>
+                <label className="wide">
+                  説明
+                  <textarea
+                    rows={2}
+                    value={tagCreateForm.description}
+                    onChange={(e) => setTagCreateForm({ ...tagCreateForm, description: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="primary" onClick={handleCreateTagMaster} disabled={masterSaving}>
+                  {masterSaving ? '処理中...' : '登録'}
+                </button>
+              </div>
             </div>
-          )
-        ) : scoreDefinitions.length === 0 ? (
-          <div className="empty-state">スコアが見つかりません。</div>
+
+            <div className="form-block">
+              <h4>タグ更新 / 削除（名称・説明のみ）</h4>
+              <label>
+                対象タグ
+                <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)}>
+                  <option value="">選択してください</option>
+                  {tagDefinitions.map((tag) => (
+                    <option key={tag.tag_id} value={tag.tag_id}>
+                      {tag.tag_name} ({tag.tag_id})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="form-grid">
+                <label>
+                  名称
+                  <input
+                    value={tagEditForm.tag_name}
+                    onChange={(e) => setTagEditForm({ ...tagEditForm, tag_name: e.target.value })}
+                  />
+                </label>
+                <label className="wide">
+                  説明
+                  <textarea
+                    rows={2}
+                    value={tagEditForm.description}
+                    onChange={(e) => setTagEditForm({ ...tagEditForm, description: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="primary" onClick={handleUpdateTagMaster} disabled={!selectedTagId || masterSaving}>
+                  {masterSaving ? '処理中...' : '更新'}
+                </button>
+                <button className="danger" onClick={handleDeleteTagMaster} disabled={!selectedTagId || masterSaving}>
+                  削除
+                </button>
+              </div>
+            </div>
+
+            {tagDefinitions.length === 0 ? (
+              <div className="empty-state">タグが見つかりません。</div>
+            ) : (
+              <div className="table-scroll compact">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>名称</th>
+                      <th>説明</th>
+                      <th>作成日時</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tagDefinitions.map((tag) => (
+                      <tr key={tag.tag_id}>
+                        <td>{tag.tag_id}</td>
+                        <td>{tag.tag_name}</td>
+                        <td>{tag.description || '-'}</td>
+                        <td>{formatDate(tag.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="table-scroll compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>名称</th>
-                  <th>コード</th>
-                  <th>方向性</th>
-                  <th>ソース</th>
-                  <th>更新日時</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scoreDefinitions.map((score) => (
-                  <tr key={score.score_id}>
-                    <td>{score.score_id}</td>
-                    <td>{score.score_name}</td>
-                    <td>{score.score_code}</td>
-                    <td>{score.direction || '-'}</td>
-                    <td>{score.source_type || '-'}</td>
-                    <td>{formatDate(score.updated_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="form-block">
+              <h4>スコア新規登録</h4>
+              <div className="form-grid">
+                <label>
+                  スコアコード
+                  <input
+                    value={scoreCreateForm.score_code}
+                    onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, score_code: e.target.value })}
+                    placeholder="例: churn_risk"
+                  />
+                </label>
+                <label>
+                  スコア名称 *
+                  <input
+                    value={scoreCreateForm.score_name}
+                    onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, score_name: e.target.value })}
+                    placeholder="画面表示用の名称"
+                  />
+                </label>
+                <label className="wide">
+                  説明
+                  <textarea
+                    rows={2}
+                    value={scoreCreateForm.description}
+                    onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, description: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="primary" onClick={handleCreateScoreMaster} disabled={masterSaving}>
+                  {masterSaving ? '処理中...' : '登録'}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-block">
+              <h4>スコア更新 / 削除（名称・説明のみ）</h4>
+              <label>
+                対象スコア
+                <select value={selectedScoreId} onChange={(e) => setSelectedScoreId(e.target.value)}>
+                  <option value="">選択してください</option>
+                  {scoreDefinitions.map((score) => (
+                    <option key={score.score_id} value={score.score_id}>
+                      {score.score_name} ({score.score_id})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="form-grid">
+                <label>
+                  名称
+                  <input
+                    value={scoreEditForm.score_name}
+                    onChange={(e) => setScoreEditForm({ ...scoreEditForm, score_name: e.target.value })}
+                  />
+                </label>
+                <label className="wide">
+                  説明
+                  <textarea
+                    rows={2}
+                    value={scoreEditForm.description}
+                    onChange={(e) => setScoreEditForm({ ...scoreEditForm, description: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="primary" onClick={handleUpdateScoreMaster} disabled={!selectedScoreId || masterSaving}>
+                  {masterSaving ? '処理中...' : '更新'}
+                </button>
+                <button className="danger" onClick={handleDeleteScoreMaster} disabled={!selectedScoreId || masterSaving}>
+                  削除
+                </button>
+              </div>
+            </div>
+
+            {scoreDefinitions.length === 0 ? (
+              <div className="empty-state">スコアが見つかりません。</div>
+            ) : (
+              <div className="table-scroll compact">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>名称</th>
+                      <th>コード</th>
+                      <th>方向性</th>
+                      <th>ソース</th>
+                      <th>更新日時</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scoreDefinitions.map((score) => (
+                      <tr key={score.score_id}>
+                        <td>{score.score_id}</td>
+                        <td>{score.score_name}</td>
+                        <td>{score.score_code}</td>
+                        <td>{score.direction || '-'}</td>
+                        <td>{score.source_type || '-'}</td>
+                        <td>{formatDate(score.updated_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
