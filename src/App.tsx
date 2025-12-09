@@ -357,10 +357,8 @@ export default function App() {
                   <tr>
                     <th>ID</th>
                     <th>名称</th>
-                    <th>コード</th>
-                    <th>値種別</th>
-                    <th>ソース</th>
-                    <th>更新日時</th>
+                    <th>説明</th>
+                    <th>作成日時</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,10 +366,8 @@ export default function App() {
                     <tr key={tag.tag_id}>
                       <td>{tag.tag_id}</td>
                       <td>{tag.tag_name}</td>
-                      <td>{tag.tag_code}</td>
-                      <td>{tag.value_type || '-'}</td>
-                      <td>{tag.source_type || '-'}</td>
-                      <td>{formatDate(tag.updated_at)}</td>
+                      <td>{tag.description || '-'}</td>
+                      <td>{formatDate(tag.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -458,7 +454,38 @@ export default function App() {
             <div className="card-header">
               <h3>アカウントタグ</h3>
             </div>
-            {renderDynamicTable(accountTagTable, 'タグの評価がありません。')}
+            <div className="table-scroll compact">
+              <table>
+                <thead>
+                  <tr>
+                    <th>アカウント名</th>
+                    <th>タグ名</th>
+                    <th>値</th>
+                    <th>信頼度</th>
+                    <th>作成日時</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountTagTable.rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className="empty-state">タグの評価がありません。</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    accountTagTable.rows.map((row, idx) => (
+                      <tr key={idx}>
+                        <td>{formatCell((row as Record<string, unknown>)['account_name'])}</td>
+                        <td>{formatCell((row as Record<string, unknown>)['tag_name'])}</td>
+                        <td>{formatCell((row as Record<string, unknown>)['tag_value'])}</td>
+                        <td>{formatCell((row as Record<string, unknown>)['confidence_score'])}</td>
+                        <td>{formatDate((row as Record<string, string>)['created_at'])}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <div className="table-card">
