@@ -178,6 +178,19 @@ table {
   border-collapse: collapse;
 }
 
+.table-scroll.compact table {
+  font-size: 0.92rem;
+}
+
+.table-scroll.compact th {
+  font-size: 0.78rem;
+}
+
+.table-scroll.compact td {
+  padding: 0.6rem 0.75rem;
+  line-height: 1.35;
+}
+
 th,
 td {
   padding: 0.75rem;
@@ -198,6 +211,41 @@ tbody tr {
 
 tbody tr:hover {
   background: #eef2ff;
+}
+
+.account-table {
+  table-layout: fixed;
+}
+
+.account-table .col-account {
+  width: 14rem;
+}
+
+.account-table .col-tag {
+  width: 9rem;
+}
+
+.account-table .col-value {
+  width: auto;
+}
+
+.account-table .col-confidence {
+  width: 7rem;
+}
+
+.account-table .col-created {
+  width: 9rem;
+}
+
+.account-table td:nth-child(3) {
+  word-break: break-word;
+}
+
+.account-table td:nth-child(4),
+.account-table td:nth-child(5),
+.account-table th:nth-child(4),
+.account-table th:nth-child(5) {
+  white-space: nowrap;
 }
 
 .detail-panel {

@@ -59,9 +59,9 @@ export default function App() {
   const [masterLoading, setMasterLoading] = useState(false);
   const [masterType, setMasterType] = useState<'tag' | 'score'>('tag');
 
-  const [accountIdFilter, setAccountIdFilter] = useState('');
-  const [tagIdFilter, setTagIdFilter] = useState('');
-  const [scoreIdFilter, setScoreIdFilter] = useState('');
+  const [accountNameFilter, setAccountNameFilter] = useState('');
+  const [tagNameFilter, setTagNameFilter] = useState('');
+  const [scoreNameFilter, setScoreNameFilter] = useState('');
   const [accountLimit, setAccountLimit] = useState(200);
   const [accountTagTable, setAccountTagTable] = useState<TableResult>({ columns: [], rows: [] });
   const [accountScoreTable, setAccountScoreTable] = useState<TableResult>({ columns: [], rows: [] });
@@ -106,14 +106,14 @@ export default function App() {
     setError(null);
     setAccountLoading(true);
     try {
-      const queryAccountId = accountIdFilter.trim() || undefined;
-      const queryTagId = tagIdFilter.trim() || undefined;
-      const queryScoreId = scoreIdFilter.trim() || undefined;
+      const queryAccountName = accountNameFilter.trim() || undefined;
+      const queryTagName = tagNameFilter.trim() || undefined;
+      const queryScoreName = scoreNameFilter.trim() || undefined;
       const limit = Number.isFinite(accountLimit) ? accountLimit : 200;
 
       const [tags, scores] = await Promise.all([
-        fetchAccountTags({ account_id: queryAccountId, tag_id: queryTagId, limit }),
-        fetchAccountScores({ account_id: queryAccountId, score_id: queryScoreId, limit })
+        fetchAccountTags({ account_name: queryAccountName, tag_name: queryTagName, limit }),
+        fetchAccountScores({ account_name: queryAccountName, score_name: queryScoreName, limit })
       ]);
       setAccountTagTable(tags);
       setAccountScoreTable(scores);
@@ -125,7 +125,7 @@ export default function App() {
     } finally {
       setAccountLoading(false);
     }
-  }, [accountIdFilter, accountLimit, scoreIdFilter, tagIdFilter]);
+  }, [accountLimit, accountNameFilter, scoreNameFilter, tagNameFilter]);
 
   const handleGenerateTags = async () => {
     setError(null);
@@ -206,7 +206,7 @@ export default function App() {
     <div className="empty-state">詳細を確認する候補を選択してください。</div>
   );
 
-  const renderDynamicTable = (data: TableResult, emptyMessage: string) => {
+  const renderDynamicTable = (data: TableResult, emptyMessage: string, className?: string) => {
     if (accountLoading) {
       return <div className="empty-state">読込中...</div>;
     }
@@ -215,7 +215,7 @@ export default function App() {
     }
     return (
       <div className="table-scroll compact">
-        <table>
+        <table className={className}>
           <thead>
             <tr>
               {data.columns.map((col) => (
@@ -408,96 +408,103 @@ export default function App() {
     </div>
   );
 
-  const accountSection = (
-    <>
-      <div className="filters">
-        <label>
-          企業ID
-          <input value={accountIdFilter} onChange={(e) => setAccountIdFilter(e.target.value)} placeholder="任意" />
-        </label>
-        <label>
-          タグID
-          <input value={tagIdFilter} onChange={(e) => setTagIdFilter(e.target.value)} placeholder="任意" />
-        </label>
-        <label>
-          スコアID
-          <input value={scoreIdFilter} onChange={(e) => setScoreIdFilter(e.target.value)} placeholder="任意" />
-        </label>
-        <label>
-          最大件数
-          <input
-            type="number"
-            min={1}
-            max={2000}
-            value={accountLimit}
-            onChange={(e) => setAccountLimit(Number(e.target.value) || 0)}
-          />
-        </label>
-        <label>
-          表示
-          <select value={accountViewType} onChange={(e) => setAccountViewType(e.target.value as 'tag' | 'score')}>
-            <option value="tag">タグ</option>
-            <option value="score">スコア</option>
-          </select>
-        </label>
-        <label>
-          &nbsp;
-          <button className="primary" onClick={loadAccountEvaluations} disabled={accountLoading}>
-            {accountLoading ? '読込中...' : '検索'}
-          </button>
-        </label>
-      </div>
+const accountSection = (
+  <>
+    <div className="filters">
+      <label>
+        企業名
+        <input value={accountNameFilter} onChange={(e) => setAccountNameFilter(e.target.value)} placeholder="キーワードで検索" />
+      </label>
+      <label>
+        タグ名
+        <input value={tagNameFilter} onChange={(e) => setTagNameFilter(e.target.value)} placeholder="キーワードで検索" />
+      </label>
+      <label>
+        スコア名
+        <input value={scoreNameFilter} onChange={(e) => setScoreNameFilter(e.target.value)} placeholder="キーワードで検索" />
+      </label>
+      <label>
+        最大件数
+        <input
+          type="number"
+          min={1}
+          max={2000}
+          value={accountLimit}
+          onChange={(e) => setAccountLimit(Number(e.target.value) || 0)}
+        />
+      </label>
+      <label>
+        表示
+        <select value={accountViewType} onChange={(e) => setAccountViewType(e.target.value as 'tag' | 'score')}>
+          <option value="tag">タグ</option>
+          <option value="score">スコア</option>
+        </select>
+      </label>
+      <label>
+        &nbsp;
+        <button className="primary" onClick={loadAccountEvaluations} disabled={accountLoading}>
+          {accountLoading ? '読込中...' : '検索'}
+        </button>
+      </label>
+    </div>
 
-      <div className="section-grid">
-        {accountViewType === 'tag' ? (
-          <div className="table-card">
-            <div className="card-header">
-              <h3>企業タグ</h3>
-            </div>
-            <div className="table-scroll compact">
-              <table>
-                <thead>
+    <div className="section-grid">
+      {accountViewType === 'tag' ? (
+        <div className="table-card">
+          <div className="card-header">
+            <h3>企業タグ</h3>
+          </div>
+          <div className="table-scroll compact">
+            <table className="account-table">
+              <colgroup>
+                <col className="col-account" />
+                <col className="col-tag" />
+                <col className="col-value" />
+                <col className="col-confidence" />
+                <col className="col-created" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>企業名</th>
+                  <th>タグ</th>
+                  <th>判断材料となった活動</th>
+                  <th>信頼度</th>
+                  <th>作成日時</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accountTagTable.rows.length === 0 ? (
                   <tr>
-                    <th>企業名</th>
-                    <th>タグ</th>
-                    <th>判断材料となった活動</th>
-                    <th>信頼度</th>
-                    <th>作成日時</th>
+                    <td colSpan={5}>
+                      <div className="empty-state">タグの評価がありません。</div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {accountTagTable.rows.length === 0 ? (
-                    <tr>
-                      <td colSpan={5}>
-                        <div className="empty-state">タグの評価がありません。</div>
-                      </td>
+                ) : (
+                  accountTagTable.rows.map((row, idx) => (
+                    <tr key={idx}>
+                      <td>{formatCell((row as Record<string, unknown>)['account_name'])}</td>
+                      <td>{formatCell((row as Record<string, unknown>)['tag_name'])}</td>
+                      <td>{formatCell((row as Record<string, unknown>)['tag_value'])}</td>
+                      <td>{formatCell((row as Record<string, unknown>)['confidence_score'])}</td>
+                      <td>{formatDate((row as Record<string, string>)['created_at'])}</td>
                     </tr>
-                  ) : (
-                    accountTagTable.rows.map((row, idx) => (
-                      <tr key={idx}>
-                        <td>{formatCell((row as Record<string, unknown>)['account_name'])}</td>
-                        <td>{formatCell((row as Record<string, unknown>)['tag_name'])}</td>
-                        <td>{formatCell((row as Record<string, unknown>)['tag_value'])}</td>
-                        <td>{formatCell((row as Record<string, unknown>)['confidence_score'])}</td>
-                        <td>{formatDate((row as Record<string, string>)['created_at'])}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <div className="table-card">
-            <div className="card-header">
-              <h3>企業スコア</h3>
-            </div>
-            {renderDynamicTable(accountScoreTable, 'スコアの評価がありません。')}
+        </div>
+      ) : (
+        <div className="table-card">
+          <div className="card-header">
+            <h3>企業スコア</h3>
           </div>
-        )}
-      </div>
-    </>
-  );
+          {renderDynamicTable(accountScoreTable, 'スコアの評価がありません。', 'account-table')}
+        </div>
+      )}
+    </div>
+  </>
+);
 
   return (
     <div className="app-shell">

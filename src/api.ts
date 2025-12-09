@@ -104,16 +104,22 @@ export async function fetchScoreDefinitions(params: MasterQuery = {}): Promise<S
 
 export interface AccountQueryParams {
   account_id?: string;
+  account_name?: string;
   tag_id?: string;
+  tag_name?: string;
   score_id?: string;
+  score_name?: string;
   limit?: number;
 }
 
 function buildQuery(params: AccountQueryParams = {}) {
   const query = new URLSearchParams();
   if (params.account_id) query.set('account_id', params.account_id);
+  if (params.account_name) query.set('account_name', params.account_name);
   if (params.tag_id) query.set('tag_id', params.tag_id);
+  if (params.tag_name) query.set('tag_name', params.tag_name);
   if (params.score_id) query.set('score_id', params.score_id);
+  if (params.score_name) query.set('score_name', params.score_name);
   if (params.limit) query.set('limit', String(params.limit));
   const suffix = query.toString() ? `?${query.toString()}` : '';
   return suffix;
