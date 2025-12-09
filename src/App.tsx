@@ -19,7 +19,7 @@ import type {
 
 type TabKey = 'candidates' | 'masters' | 'account-evals';
 
-const typeOptions: CandidateType[] = ['behavior_feature', 'tag', 'score'];
+const typeOptions: CandidateType[] = ['tag', 'score', 'behavior_feature'];
 const statusOptions: CandidateStatus[] = ['new', 'adopted', 'rejected'];
 
 function formatDate(value?: string) {
@@ -30,21 +30,21 @@ function formatDate(value?: string) {
       timeStyle: 'short'
     }).format(new Date(value));
   } catch (err) {
-    console.warn('Failed to format date', err);
+    console.warn('日付のフォーマットに失敗しました', err);
     return value;
   }
 }
 
 function formatCell(value: unknown) {
   if (value === null || value === undefined || value === '') return '-';
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
   return String(value);
 }
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('candidates');
 
-  const [typeFilter, setTypeFilter] = useState<CandidateType>('behavior_feature');
+  const [typeFilter, setTypeFilter] = useState<CandidateType>('tag');
   const [statusFilter, setStatusFilter] = useState<CandidateStatus>('new');
   const [candidates, setCandidates] = useState<FeatureCandidate[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<FeatureCandidate | null>(null);
@@ -57,6 +57,7 @@ export default function App() {
   const [tagDefinitions, setTagDefinitions] = useState<TagDefinition[]>([]);
   const [scoreDefinitions, setScoreDefinitions] = useState<ScoreDefinition[]>([]);
   const [masterLoading, setMasterLoading] = useState(false);
+  const [masterType, setMasterType] = useState<'tag' | 'score'>('tag');
 
   const [accountIdFilter, setAccountIdFilter] = useState('');
   const [tagIdFilter, setTagIdFilter] = useState('');
@@ -65,6 +66,7 @@ export default function App() {
   const [accountTagTable, setAccountTagTable] = useState<TableResult>({ columns: [], rows: [] });
   const [accountScoreTable, setAccountScoreTable] = useState<TableResult>({ columns: [], rows: [] });
   const [accountLoading, setAccountLoading] = useState(false);
+  const [accountViewType, setAccountViewType] = useState<'tag' | 'score'>('tag');
 
   const loadCandidates = useCallback(async () => {
     setError(null);
@@ -75,7 +77,7 @@ export default function App() {
       setSelectedCandidate((prev) => (prev ? list.find((c) => c.candidate_id === prev.candidate_id) ?? null : null));
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch candidates');
+      setError(err instanceof Error ? err.message : '候補の取得に失敗しました');
       setCandidates([]);
       setSelectedCandidate(null);
     } finally {
@@ -92,7 +94,7 @@ export default function App() {
       setScoreDefinitions(scores);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to load master data');
+      setError(err instanceof Error ? err.message : 'マスターの取得に失敗しました');
       setTagDefinitions([]);
       setScoreDefinitions([]);
     } finally {
@@ -117,7 +119,7 @@ export default function App() {
       setAccountScoreTable(scores);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to load account evaluations');
+      setError(err instanceof Error ? err.message : 'アカウントの評価情報取得に失敗しました');
       setAccountTagTable({ columns: [], rows: [] });
       setAccountScoreTable({ columns: [], rows: [] });
     } finally {
@@ -131,11 +133,11 @@ export default function App() {
     setGenerating(true);
     try {
       const res = await generateTagCandidates();
-      setInfoMessage(res.message || 'Triggered tag candidate generation.');
+      setInfoMessage(res.message || 'タグ候補の生成をトリガーしました。');
       await loadCandidates();
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to trigger tag generation');
+      setError(err instanceof Error ? err.message : 'タグ生成の呼び出しに失敗しました');
     } finally {
       setGenerating(false);
     }
@@ -168,7 +170,7 @@ export default function App() {
       await loadCandidates();
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Failed to update candidate');
+      setError(err instanceof Error ? err.message : '候補の更新に失敗しました');
     } finally {
       setUpdating(false);
     }
@@ -178,35 +180,35 @@ export default function App() {
     <div>
       <h2>{selectedCandidate.name_proposed}</h2>
       <p>
-        <strong>Source:</strong> {selectedCandidate.source}
+        <strong>ソース:</strong> {selectedCandidate.source}
       </p>
       <p>
-        <strong>Status:</strong> {selectedCandidate.status}
+        <strong>ステータス:</strong> {selectedCandidate.status}
       </p>
       <section>
-        <h3>Description</h3>
-        <p>{selectedCandidate.description_proposed || 'n/a'}</p>
+        <h3>説明</h3>
+        <p>{selectedCandidate.description_proposed || 'なし'}</p>
       </section>
       <section>
-        <h3>Logic Proposal</h3>
-        <pre>{selectedCandidate.logic_proposed || 'n/a'}</pre>
+        <h3>算出ロジック案</h3>
+        <pre>{selectedCandidate.logic_proposed || 'なし'}</pre>
       </section>
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button className="secondary" disabled={updating} onClick={() => handleAction('adopt')}>
-          Adopt
+          採用
         </button>
         <button className="danger" disabled={updating} onClick={() => handleAction('reject')}>
-          Reject
+          却下
         </button>
       </div>
     </div>
   ) : (
-    <div className="empty-state">Select a candidate to review details.</div>
+    <div className="empty-state">詳細を確認する候補を選択してください。</div>
   );
 
   const renderDynamicTable = (data: TableResult, emptyMessage: string) => {
     if (accountLoading) {
-      return <div className="empty-state">Loading...</div>;
+      return <div className="empty-state">読込中...</div>;
     }
     if (!data.rows.length) {
       return <div className="empty-state">{emptyMessage}</div>;
@@ -239,7 +241,7 @@ export default function App() {
     <>
       <div className="filters">
         <label>
-          Type
+          種別
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as CandidateType)}>
             {typeOptions.map((option) => (
               <option key={option} value={option}>
@@ -249,7 +251,7 @@ export default function App() {
           </select>
         </label>
         <label>
-          Status
+          ステータス
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as CandidateStatus)}>
             {statusOptions.map((option) => (
               <option key={option} value={option}>
@@ -261,7 +263,7 @@ export default function App() {
         <label>
           &nbsp;
           <button className="primary" onClick={loadCandidates} disabled={loading}>
-            {loading ? 'Loading...' : 'Search'}
+            {loading ? '読込中...' : '検索'}
           </button>
         </label>
         <label>
@@ -270,9 +272,9 @@ export default function App() {
             className="primary"
             onClick={handleGenerateTags}
             disabled={generating || loading || typeFilter !== 'tag'}
-            title={typeFilter !== 'tag' ? 'Switch Type to tag to trigger generation.' : 'Trigger tag generation'}
+            title={typeFilter !== 'tag' ? '種別を tag にすると生成できます' : 'タグ候補生成を実行'}
           >
-            {generating ? 'Triggering...' : 'Generate tag candidates'}
+            {generating ? '実行中...' : 'タグ候補を生成'}
           </button>
         </label>
       </div>
@@ -283,24 +285,24 @@ export default function App() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Name Proposal</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Created</th>
+                <th>提案名</th>
+                <th>ソース</th>
+                <th>ステータス</th>
+                <th>作成日時</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
                   <td colSpan={5}>
-                    <div className="empty-state">Loading data...</div>
+                    <div className="empty-state">データを読込中...</div>
                   </td>
                 </tr>
               )}
               {!loading && candidates.length === 0 && (
                 <tr>
                   <td colSpan={5}>
-                    <div className="empty-state">No candidates found.</div>
+                    <div className="empty-state">候補が見つかりません。</div>
                   </td>
                 </tr>
               )}
@@ -332,67 +334,63 @@ export default function App() {
     <div className="section-grid">
       <div className="table-card">
         <div className="card-header">
-          <h3>Adopted Tags</h3>
-          <button className="secondary" onClick={loadMasterData} disabled={masterLoading}>
-            {masterLoading ? 'Loading...' : 'Refresh'}
-          </button>
-        </div>
-        {masterLoading ? (
-          <div className="empty-state">Loading tag definitions...</div>
-        ) : tagDefinitions.length === 0 ? (
-          <div className="empty-state">No tags found.</div>
-        ) : (
-          <div className="table-scroll compact">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Code</th>
-                  <th>Value Type</th>
-                  <th>Source</th>
-                  <th>Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tagDefinitions.map((tag) => (
-                  <tr key={tag.tag_id}>
-                    <td>{tag.tag_id}</td>
-                    <td>{tag.tag_name}</td>
-                    <td>{tag.tag_code}</td>
-                    <td>{tag.value_type || '-'}</td>
-                    <td>{tag.source_type || '-'}</td>
-                    <td>{formatDate(tag.updated_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h3>マスター一覧</h3>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <select value={masterType} onChange={(e) => setMasterType(e.target.value as 'tag' | 'score')}>
+              <option value="tag">タグ</option>
+              <option value="score">スコア</option>
+            </select>
+            <button className="secondary" onClick={loadMasterData} disabled={masterLoading}>
+              {masterLoading ? '読込中...' : '再読込'}
+            </button>
           </div>
-        )}
-      </div>
-
-      <div className="table-card">
-        <div className="card-header">
-          <h3>Adopted Scores</h3>
-          <button className="secondary" onClick={loadMasterData} disabled={masterLoading}>
-            {masterLoading ? 'Loading...' : 'Refresh'}
-          </button>
         </div>
         {masterLoading ? (
-          <div className="empty-state">Loading score definitions...</div>
+          <div className="empty-state">マスターを読込中...</div>
+        ) : masterType === 'tag' ? (
+          tagDefinitions.length === 0 ? (
+            <div className="empty-state">タグが見つかりません。</div>
+          ) : (
+            <div className="table-scroll compact">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>名称</th>
+                    <th>コード</th>
+                    <th>値種別</th>
+                    <th>ソース</th>
+                    <th>更新日時</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tagDefinitions.map((tag) => (
+                    <tr key={tag.tag_id}>
+                      <td>{tag.tag_id}</td>
+                      <td>{tag.tag_name}</td>
+                      <td>{tag.tag_code}</td>
+                      <td>{tag.value_type || '-'}</td>
+                      <td>{tag.source_type || '-'}</td>
+                      <td>{formatDate(tag.updated_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : scoreDefinitions.length === 0 ? (
-          <div className="empty-state">No scores found.</div>
+          <div className="empty-state">スコアが見つかりません。</div>
         ) : (
           <div className="table-scroll compact">
             <table>
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Name</th>
-                  <th>Code</th>
-                  <th>Direction</th>
-                  <th>Source</th>
-                  <th>Updated</th>
+                  <th>名称</th>
+                  <th>コード</th>
+                  <th>方向性</th>
+                  <th>ソース</th>
+                  <th>更新日時</th>
                 </tr>
               </thead>
               <tbody>
@@ -418,19 +416,19 @@ export default function App() {
     <>
       <div className="filters">
         <label>
-          Account ID
-          <input value={accountIdFilter} onChange={(e) => setAccountIdFilter(e.target.value)} placeholder="optional" />
+          アカウントID
+          <input value={accountIdFilter} onChange={(e) => setAccountIdFilter(e.target.value)} placeholder="任意" />
         </label>
         <label>
-          Tag ID
-          <input value={tagIdFilter} onChange={(e) => setTagIdFilter(e.target.value)} placeholder="optional" />
+          タグID
+          <input value={tagIdFilter} onChange={(e) => setTagIdFilter(e.target.value)} placeholder="任意" />
         </label>
         <label>
-          Score ID
-          <input value={scoreIdFilter} onChange={(e) => setScoreIdFilter(e.target.value)} placeholder="optional" />
+          スコアID
+          <input value={scoreIdFilter} onChange={(e) => setScoreIdFilter(e.target.value)} placeholder="任意" />
         </label>
         <label>
-          Limit
+          最大件数
           <input
             type="number"
             min={1}
@@ -440,46 +438,56 @@ export default function App() {
           />
         </label>
         <label>
+          表示
+          <select value={accountViewType} onChange={(e) => setAccountViewType(e.target.value as 'tag' | 'score')}>
+            <option value="tag">タグ</option>
+            <option value="score">スコア</option>
+          </select>
+        </label>
+        <label>
           &nbsp;
           <button className="primary" onClick={loadAccountEvaluations} disabled={accountLoading}>
-            {accountLoading ? 'Loading...' : 'Search'}
+            {accountLoading ? '読込中...' : '検索'}
           </button>
         </label>
       </div>
 
       <div className="section-grid">
-        <div className="table-card">
-          <div className="card-header">
-            <h3>Account Tags</h3>
+        {accountViewType === 'tag' ? (
+          <div className="table-card">
+            <div className="card-header">
+              <h3>アカウントタグ</h3>
+            </div>
+            {renderDynamicTable(accountTagTable, 'タグの評価がありません。')}
           </div>
-          {renderDynamicTable(accountTagTable, 'No tag evaluations found.')}
-        </div>
-        <div className="table-card">
-          <div className="card-header">
-            <h3>Account Scores</h3>
+        ) : (
+          <div className="table-card">
+            <div className="card-header">
+              <h3>アカウントスコア</h3>
+            </div>
+            {renderDynamicTable(accountScoreTable, 'スコアの評価がありません。')}
           </div>
-          {renderDynamicTable(accountScoreTable, 'No score evaluations found.')}
-        </div>
+        )}
       </div>
     </>
   );
 
   return (
     <div className="app-shell">
-      <h1>AI Target Console</h1>
+      <h1>AIターゲット コンソール</h1>
 
       <div className="tab-bar">
         <button className={`tab-button ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>
-          Feature Candidates
+          候補レビュー
         </button>
         <button className={`tab-button ${activeTab === 'masters' ? 'active' : ''}`} onClick={() => setActiveTab('masters')}>
-          Tag/Score Master
+          タグ/スコア マスター
         </button>
         <button
           className={`tab-button ${activeTab === 'account-evals' ? 'active' : ''}`}
           onClick={() => setActiveTab('account-evals')}
         >
-          Account Evaluations
+          アカウント評価
         </button>
       </div>
 
