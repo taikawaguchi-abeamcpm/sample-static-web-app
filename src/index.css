@@ -47,7 +47,9 @@ h1 {
 }
 
 select,
-button {
+button,
+input[type='text'],
+input[type='number'] {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid #d1d5db;
@@ -78,6 +80,27 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.tab-button {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 0.65rem 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
 .table-wrapper {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -95,6 +118,10 @@ button:disabled {
   overflow: auto;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
+}
+
+.table-scroll.compact {
+  max-height: 420px;
 }
 
 table {
@@ -135,6 +162,27 @@ tbody tr:hover {
   padding: 0.75rem;
   border-radius: 0.5rem;
   overflow-x: auto;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.table-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fafafa;
+  padding: 0.75rem;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .status-badge {

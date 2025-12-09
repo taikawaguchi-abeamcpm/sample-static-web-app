@@ -1,6 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchFeatureCandidates, generateTagCandidates, updateFeatureCandidate } from './api';
-import type { CandidateStatus, CandidateType, FeatureCandidate } from './types';
+import {
+  fetchAccountScores,
+  fetchAccountTags,
+  fetchFeatureCandidates,
+  fetchScoreDefinitions,
+  fetchTagDefinitions,
+  generateTagCandidates,
+  updateFeatureCandidate
+} from './api';
+import type {
+  CandidateStatus,
+  CandidateType,
+  FeatureCandidate,
+  ScoreDefinition,
+  TableResult,
+  TagDefinition
+} from './types';
+
+type TabKey = 'candidates' | 'masters' | 'account-evals';
 
 const typeOptions: CandidateType[] = ['behavior_feature', 'tag', 'score'];
 const statusOptions: CandidateStatus[] = ['new', 'adopted', 'rejected'];
@@ -18,7 +35,15 @@ function formatDate(value?: string) {
   }
 }
 
+function formatCell(value: unknown) {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+}
+
 export default function App() {
+  const [activeTab, setActiveTab] = useState<TabKey>('candidates');
+
   const [typeFilter, setTypeFilter] = useState<CandidateType>('behavior_feature');
   const [statusFilter, setStatusFilter] = useState<CandidateStatus>('new');
   const [candidates, setCandidates] = useState<FeatureCandidate[]>([]);
@@ -28,6 +53,18 @@ export default function App() {
   const [updating, setUpdating] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  const [tagDefinitions, setTagDefinitions] = useState<TagDefinition[]>([]);
+  const [scoreDefinitions, setScoreDefinitions] = useState<ScoreDefinition[]>([]);
+  const [masterLoading, setMasterLoading] = useState(false);
+
+  const [accountIdFilter, setAccountIdFilter] = useState('');
+  const [tagIdFilter, setTagIdFilter] = useState('');
+  const [scoreIdFilter, setScoreIdFilter] = useState('');
+  const [accountLimit, setAccountLimit] = useState(200);
+  const [accountTagTable, setAccountTagTable] = useState<TableResult>({ columns: [], rows: [] });
+  const [accountScoreTable, setAccountScoreTable] = useState<TableResult>({ columns: [], rows: [] });
+  const [accountLoading, setAccountLoading] = useState(false);
 
   const loadCandidates = useCallback(async () => {
     setError(null);
@@ -46,13 +83,55 @@ export default function App() {
     }
   }, [statusFilter, typeFilter]);
 
+  const loadMasterData = useCallback(async () => {
+    setError(null);
+    setMasterLoading(true);
+    try {
+      const [tags, scores] = await Promise.all([fetchTagDefinitions(), fetchScoreDefinitions()]);
+      setTagDefinitions(tags);
+      setScoreDefinitions(scores);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Failed to load master data');
+      setTagDefinitions([]);
+      setScoreDefinitions([]);
+    } finally {
+      setMasterLoading(false);
+    }
+  }, []);
+
+  const loadAccountEvaluations = useCallback(async () => {
+    setError(null);
+    setAccountLoading(true);
+    try {
+      const queryAccountId = accountIdFilter.trim() || undefined;
+      const queryTagId = tagIdFilter.trim() || undefined;
+      const queryScoreId = scoreIdFilter.trim() || undefined;
+      const limit = Number.isFinite(accountLimit) ? accountLimit : 200;
+
+      const [tags, scores] = await Promise.all([
+        fetchAccountTags({ account_id: queryAccountId, tag_id: queryTagId, limit }),
+        fetchAccountScores({ account_id: queryAccountId, score_id: queryScoreId, limit })
+      ]);
+      setAccountTagTable(tags);
+      setAccountScoreTable(scores);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Failed to load account evaluations');
+      setAccountTagTable({ columns: [], rows: [] });
+      setAccountScoreTable({ columns: [], rows: [] });
+    } finally {
+      setAccountLoading(false);
+    }
+  }, [accountIdFilter, accountLimit, scoreIdFilter, tagIdFilter]);
+
   const handleGenerateTags = async () => {
     setError(null);
     setInfoMessage(null);
     setGenerating(true);
     try {
       const res = await generateTagCandidates();
-      setInfoMessage(res.message || 'タグ候補生成をトリガーしました。');
+      setInfoMessage(res.message || 'Triggered tag candidate generation.');
       await loadCandidates();
     } catch (err) {
       console.error(err);
@@ -63,8 +142,22 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadCandidates();
-  }, [loadCandidates]);
+    if (activeTab === 'candidates') {
+      loadCandidates();
+    }
+  }, [activeTab, loadCandidates]);
+
+  useEffect(() => {
+    if (activeTab === 'masters') {
+      loadMasterData();
+    } else if (activeTab === 'account-evals') {
+      loadAccountEvaluations();
+    }
+  }, [activeTab, loadAccountEvaluations, loadMasterData]);
+
+  useEffect(() => {
+    setError(null);
+  }, [activeTab]);
 
   const handleAction = async (action: 'adopt' | 'reject') => {
     if (!selectedCandidate) return;
@@ -111,9 +204,39 @@ export default function App() {
     <div className="empty-state">Select a candidate to review details.</div>
   );
 
-  return (
-    <div className="app-shell">
-      <h1>Feature Candidate Review</h1>
+  const renderDynamicTable = (data: TableResult, emptyMessage: string) => {
+    if (accountLoading) {
+      return <div className="empty-state">Loading...</div>;
+    }
+    if (!data.rows.length) {
+      return <div className="empty-state">{emptyMessage}</div>;
+    }
+    return (
+      <div className="table-scroll compact">
+        <table>
+          <thead>
+            <tr>
+              {data.columns.map((col) => (
+                <th key={col}>{col}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((row, idx) => (
+              <tr key={idx}>
+                {data.columns.map((col) => (
+                  <td key={col}>{formatCell((row as Record<string, unknown>)[col])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const candidateSection = (
+    <>
       <div className="filters">
         <label>
           Type
@@ -147,9 +270,9 @@ export default function App() {
             className="primary"
             onClick={handleGenerateTags}
             disabled={generating || loading || typeFilter !== 'tag'}
-            title={typeFilter !== 'tag' ? 'Type を tag にすると有効化されます' : 'タグ候補生成をトリガーします'}
+            title={typeFilter !== 'tag' ? 'Switch Type to tag to trigger generation.' : 'Trigger tag generation'}
           >
-            {generating ? '生成中...' : 'タグ候補生成'}
+            {generating ? 'Triggering...' : 'Generate tag candidates'}
           </button>
         </label>
       </div>
@@ -192,9 +315,7 @@ export default function App() {
                     <td>{candidate.name_proposed}</td>
                     <td>{candidate.source}</td>
                     <td>
-                      <span className={`status-badge status-${candidate.status}`}>
-                        {candidate.status}
-                      </span>
+                      <span className={`status-badge status-${candidate.status}`}>{candidate.status}</span>
                     </td>
                     <td>{formatDate(candidate.created_at)}</td>
                   </tr>
@@ -204,6 +325,167 @@ export default function App() {
         </div>
         <div className="detail-panel">{detailPanel}</div>
       </div>
+    </>
+  );
+
+  const masterSection = (
+    <div className="section-grid">
+      <div className="table-card">
+        <div className="card-header">
+          <h3>Adopted Tags</h3>
+          <button className="secondary" onClick={loadMasterData} disabled={masterLoading}>
+            {masterLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        {masterLoading ? (
+          <div className="empty-state">Loading tag definitions...</div>
+        ) : tagDefinitions.length === 0 ? (
+          <div className="empty-state">No tags found.</div>
+        ) : (
+          <div className="table-scroll compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Code</th>
+                  <th>Value Type</th>
+                  <th>Source</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tagDefinitions.map((tag) => (
+                  <tr key={tag.tag_id}>
+                    <td>{tag.tag_id}</td>
+                    <td>{tag.tag_name}</td>
+                    <td>{tag.tag_code}</td>
+                    <td>{tag.value_type || '-'}</td>
+                    <td>{tag.source_type || '-'}</td>
+                    <td>{formatDate(tag.updated_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="table-card">
+        <div className="card-header">
+          <h3>Adopted Scores</h3>
+          <button className="secondary" onClick={loadMasterData} disabled={masterLoading}>
+            {masterLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        {masterLoading ? (
+          <div className="empty-state">Loading score definitions...</div>
+        ) : scoreDefinitions.length === 0 ? (
+          <div className="empty-state">No scores found.</div>
+        ) : (
+          <div className="table-scroll compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Code</th>
+                  <th>Direction</th>
+                  <th>Source</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scoreDefinitions.map((score) => (
+                  <tr key={score.score_id}>
+                    <td>{score.score_id}</td>
+                    <td>{score.score_name}</td>
+                    <td>{score.score_code}</td>
+                    <td>{score.direction || '-'}</td>
+                    <td>{score.source_type || '-'}</td>
+                    <td>{formatDate(score.updated_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const accountSection = (
+    <>
+      <div className="filters">
+        <label>
+          Account ID
+          <input value={accountIdFilter} onChange={(e) => setAccountIdFilter(e.target.value)} placeholder="optional" />
+        </label>
+        <label>
+          Tag ID
+          <input value={tagIdFilter} onChange={(e) => setTagIdFilter(e.target.value)} placeholder="optional" />
+        </label>
+        <label>
+          Score ID
+          <input value={scoreIdFilter} onChange={(e) => setScoreIdFilter(e.target.value)} placeholder="optional" />
+        </label>
+        <label>
+          Limit
+          <input
+            type="number"
+            min={1}
+            max={2000}
+            value={accountLimit}
+            onChange={(e) => setAccountLimit(Number(e.target.value) || 0)}
+          />
+        </label>
+        <label>
+          &nbsp;
+          <button className="primary" onClick={loadAccountEvaluations} disabled={accountLoading}>
+            {accountLoading ? 'Loading...' : 'Search'}
+          </button>
+        </label>
+      </div>
+
+      <div className="section-grid">
+        <div className="table-card">
+          <div className="card-header">
+            <h3>Account Tags</h3>
+          </div>
+          {renderDynamicTable(accountTagTable, 'No tag evaluations found.')}
+        </div>
+        <div className="table-card">
+          <div className="card-header">
+            <h3>Account Scores</h3>
+          </div>
+          {renderDynamicTable(accountScoreTable, 'No score evaluations found.')}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="app-shell">
+      <h1>AI Target Console</h1>
+
+      <div className="tab-bar">
+        <button className={`tab-button ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>
+          Feature Candidates
+        </button>
+        <button className={`tab-button ${activeTab === 'masters' ? 'active' : ''}`} onClick={() => setActiveTab('masters')}>
+          Tag/Score Master
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'account-evals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('account-evals')}
+        >
+          Account Evaluations
+        </button>
+      </div>
+
+      {activeTab === 'candidates' && candidateSection}
+      {activeTab === 'masters' && masterSection}
+      {activeTab === 'account-evals' && accountSection}
 
       {infoMessage && <div className="info-box">{infoMessage}</div>}
       {error && <div className="error-box">{error}</div>}

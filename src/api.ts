@@ -1,4 +1,12 @@
-﻿import { CandidateStatus, CandidateType, FeatureCandidate, UpdateCandidatePayload } from './types';
+import {
+  CandidateStatus,
+  CandidateType,
+  FeatureCandidate,
+  ScoreDefinition,
+  TableResult,
+  TagDefinition,
+  UpdateCandidatePayload
+} from './types';
 
 export interface FetchParams {
   type?: CandidateType;
@@ -18,8 +26,7 @@ export async function fetchFeatureCandidates(params: FetchParams): Promise<Featu
     throw new Error(`Failed to load candidates (${res.status})`);
   }
 
-  const payload = (await res.json()) as FeatureCandidate[];
-  return payload;
+  return (await res.json()) as FeatureCandidate[];
 }
 
 export interface GenerateTagOptions {
@@ -60,4 +67,72 @@ export async function updateFeatureCandidate(data: UpdateCandidatePayload) {
   }
 
   return (await res.json()) as { candidate_id: string; status: CandidateStatus };
+}
+
+export interface MasterQuery {
+  include_inactive?: boolean;
+  limit?: number;
+}
+
+export async function fetchTagDefinitions(params: MasterQuery = {}): Promise<TagDefinition[]> {
+  const query = new URLSearchParams();
+  if (params.include_inactive) query.set('include_inactive', 'true');
+  if (params.limit) query.set('limit', String(params.limit));
+
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await fetch(`${API_BASE}/getTagDefinitions${suffix}`);
+
+  if (!res.ok) {
+    throw new Error(`Failed to load tag definitions (${res.status})`);
+  }
+  return (await res.json()) as TagDefinition[];
+}
+
+export async function fetchScoreDefinitions(params: MasterQuery = {}): Promise<ScoreDefinition[]> {
+  const query = new URLSearchParams();
+  if (params.include_inactive) query.set('include_inactive', 'true');
+  if (params.limit) query.set('limit', String(params.limit));
+
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await fetch(`${API_BASE}/getScoreDefinitions${suffix}`);
+
+  if (!res.ok) {
+    throw new Error(`Failed to load score definitions (${res.status})`);
+  }
+  return (await res.json()) as ScoreDefinition[];
+}
+
+export interface AccountQueryParams {
+  account_id?: string;
+  tag_id?: string;
+  score_id?: string;
+  limit?: number;
+}
+
+function buildQuery(params: AccountQueryParams = {}) {
+  const query = new URLSearchParams();
+  if (params.account_id) query.set('account_id', params.account_id);
+  if (params.tag_id) query.set('tag_id', params.tag_id);
+  if (params.score_id) query.set('score_id', params.score_id);
+  if (params.limit) query.set('limit', String(params.limit));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return suffix;
+}
+
+export async function fetchAccountTags(params: AccountQueryParams = {}): Promise<TableResult> {
+  const res = await fetch(`${API_BASE}/getAccountTags${buildQuery(params)}`);
+
+  if (!res.ok) {
+    throw new Error(`Failed to load account tags (${res.status})`);
+  }
+  return (await res.json()) as TableResult;
+}
+
+export async function fetchAccountScores(params: AccountQueryParams = {}): Promise<TableResult> {
+  const res = await fetch(`${API_BASE}/getAccountScores${buildQuery(params)}`);
+
+  if (!res.ok) {
+    throw new Error(`Failed to load account scores (${res.status})`);
+  }
+  return (await res.json()) as TableResult;
 }
