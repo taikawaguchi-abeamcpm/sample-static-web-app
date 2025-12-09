@@ -65,10 +65,10 @@ export default function App() {
   const [masterLoading, setMasterLoading] = useState(false);
   const [masterType, setMasterType] = useState<'tag' | 'score'>('tag');
   const [masterSaving, setMasterSaving] = useState(false);
-  const [tagCreateForm, setTagCreateForm] = useState({ tag_name: '', tag_code: '', description: '' });
+  const [tagCreateForm, setTagCreateForm] = useState({ tag_name: '', description: '' });
   const [tagEditForm, setTagEditForm] = useState({ tag_name: '', description: '' });
   const [selectedTagId, setSelectedTagId] = useState('');
-  const [scoreCreateForm, setScoreCreateForm] = useState({ score_name: '', score_code: '', description: '' });
+  const [scoreCreateForm, setScoreCreateForm] = useState({ score_name: '', description: '' });
   const [scoreEditForm, setScoreEditForm] = useState({ score_name: '', description: '' });
   const [selectedScoreId, setSelectedScoreId] = useState('');
 
@@ -225,7 +225,6 @@ export default function App() {
 
   const handleCreateTagMaster = async () => {
     const tag_name = tagCreateForm.tag_name.trim();
-    const tag_code = tagCreateForm.tag_code.trim();
     const description = tagCreateForm.description.trim();
 
     if (!tag_name) {
@@ -239,14 +238,13 @@ export default function App() {
     try {
       await createTagDefinition({
         tag_name,
-        tag_code: tag_code || undefined,
         description: description || undefined,
         value_type: 'string',
         source_type: 'manual',
         is_multi_valued: false
       });
       setInfoMessage('タグを登録しました');
-      setTagCreateForm({ tag_name: '', tag_code: '', description: '' });
+      setTagCreateForm({ tag_name: '', description: '' });
       await loadMasterData();
     } catch (err) {
       console.error(err);
@@ -314,7 +312,6 @@ export default function App() {
 
   const handleCreateScoreMaster = async () => {
     const score_name = scoreCreateForm.score_name.trim();
-    const score_code = scoreCreateForm.score_code.trim();
     const description = scoreCreateForm.description.trim();
 
     if (!score_name) {
@@ -328,13 +325,12 @@ export default function App() {
     try {
       await createScoreDefinition({
         score_name,
-        score_code: score_code || undefined,
         description: description || undefined,
         direction: 'higher_is_better',
         source_type: 'manual'
       });
       setInfoMessage('スコアを登録しました');
-      setScoreCreateForm({ score_name: '', score_code: '', description: '' });
+      setScoreCreateForm({ score_name: '', description: '' });
       await loadMasterData();
     } catch (err) {
       console.error(err);
@@ -578,14 +574,6 @@ export default function App() {
               <h4>タグ新規登録</h4>
               <div className="form-grid">
                 <label>
-                  タグコード
-                  <input
-                    value={tagCreateForm.tag_code}
-                    onChange={(e) => setTagCreateForm({ ...tagCreateForm, tag_code: e.target.value })}
-                    placeholder="例: recent_purchase"
-                  />
-                </label>
-                <label>
                   タグ名称 *
                   <input
                     value={tagCreateForm.tag_name}
@@ -681,14 +669,6 @@ export default function App() {
             <div className="form-block">
               <h4>スコア新規登録</h4>
               <div className="form-grid">
-                <label>
-                  スコアコード
-                  <input
-                    value={scoreCreateForm.score_code}
-                    onChange={(e) => setScoreCreateForm({ ...scoreCreateForm, score_code: e.target.value })}
-                    placeholder="例: churn_risk"
-                  />
-                </label>
                 <label>
                   スコア名称 *
                   <input
