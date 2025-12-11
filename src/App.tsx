@@ -885,9 +885,41 @@ const accountSection = (
   </>
 );
 
+const quickStats = [
+  { label: '候補', caption: 'フィルタ結果' },
+  { label: 'タグマスター', caption: '登録済み' },
+  { label: 'スコアマスター', caption: '登録済み' }
+];
+
   return (
     <div className="app-shell">
-      <h1>AI Targeting Platform</h1>
+      <div className="page-header">
+        <div className="page-title">
+          <p className="eyebrow">AI Targeting Platform</p>
+          <h1>Signal Ops Studio</h1>
+          <p className="lede">
+            タグ/スコアの発見から管理までをひとつの画面で。フィルタを変えながら素早く判断できるよう、必要な導線だけを残したレイアウトに整えました。
+          </p>
+        </div>
+        <div className="hero-metrics">
+          {quickStats.map((item) => {
+            const count =
+              item.label === '候補'
+                ? candidates.length
+                : item.label === 'タグマスター'
+                ? tagDefinitions.length
+                : scoreDefinitions.length;
+            const display = count ? `${count}件` : '--';
+            return (
+              <div className="metric-card" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{display}</strong>
+                <small>{item.caption}</small>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="tab-bar">
         <button className={`tab-button ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>
