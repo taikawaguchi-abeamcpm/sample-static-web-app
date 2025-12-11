@@ -47,6 +47,12 @@ function formatCell(value: unknown) {
   return String(value);
 }
 
+function formatCsvCell(value: unknown) {
+  const normalized = value === null || value === undefined ? '' : String(value);
+  const escaped = normalized.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('candidates');
 
@@ -109,7 +115,7 @@ export default function App() {
       setScoreDefinitions(scores);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'マスターの取得に失敗しました');
+      setError(err instanceof Error ? err.message : 'マスタの取得に失敗しました');
       setTagDefinitions([]);
       setScoreDefinitions([]);
     } finally {
@@ -141,6 +147,29 @@ export default function App() {
       setAccountLoading(false);
     }
   };
+
+  const handleDownloadAccountCsv = useCallback(() => {
+    const table = accountViewType === 'tag' ? accountTagTable : accountScoreTable;
+    if (!table.rows.length) {
+      setInfoMessage('ダウンロード対象の行がありません');
+      return;
+    }
+
+    const header = table.columns.map(formatCsvCell).join(',');
+    const rows = table.rows
+      .map((row) => table.columns.map((col) => formatCsvCell((row as Record<string, unknown>)[col])).join(','))
+      .join('\r\n');
+    const csv = [header, rows].filter(Boolean).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const fileName = `${accountViewType}-evaluations_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.csv`;
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [accountScoreTable, accountTagTable, accountViewType]);
 
   const handleGenerateTags = async () => {
     setError(null);
@@ -412,10 +441,6 @@ export default function App() {
         <h3>説明</h3>
         <p>{selectedCandidate.description_proposed || 'なし'}</p>
       </section>
-      <section>
-        <h3>算出ロジック案</h3>
-        <pre>{selectedCandidate.logic_proposed || 'なし'}</pre>
-      </section>
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button className="secondary" disabled={updating} onClick={() => handleAction('adopt')}>
           採用
@@ -502,7 +527,7 @@ export default function App() {
         </label>
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-wrapper candidates-grid">
         <div className="table-scroll">
           <table>
             <thead>
@@ -557,7 +582,7 @@ export default function App() {
     <div className="section-grid">
       <div className="table-card">
         <div className="card-header">
-          <h3>タグ/スコア マスター</h3>
+          <h3>タグ/スコア マスタ</h3>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <select value={masterType} onChange={(e) => setMasterType(e.target.value as 'tag' | 'score')}>
               <option value="tag">タグ</option>
@@ -569,7 +594,7 @@ export default function App() {
           </div>
         </div>
         {masterLoading ? (
-          <div className="empty-state">マスターを読込中...</div>
+          <div className="empty-state">マスタを読込中...</div>
         ) : masterType === 'tag' ? (
           <>
             <div className="form-block">
@@ -832,6 +857,9 @@ const accountSection = (
         <div className="table-card">
           <div className="card-header">
             <h3>企業タグ</h3>
+            <button className="secondary" onClick={handleDownloadAccountCsv} disabled={accountTagTable.rows.length === 0}>
+              CSVダウンロード
+            </button>
           </div>
           <div className="table-scroll compact">
             <table className="account-table">
@@ -877,6 +905,9 @@ const accountSection = (
         <div className="table-card">
           <div className="card-header">
             <h3>企業スコア</h3>
+            <button className="secondary" onClick={handleDownloadAccountCsv} disabled={accountScoreTable.rows.length === 0}>
+              CSVダウンロード
+            </button>
           </div>
           {renderDynamicTable(accountScoreTable, 'スコアの評価がありません。', 'account-table')}
         </div>
@@ -887,18 +918,18 @@ const accountSection = (
 
 const quickStats = [
   { label: '候補', caption: 'フィルタ結果' },
-  { label: 'タグマスター', caption: '登録済み' },
-  { label: 'スコアマスター', caption: '登録済み' }
+  { label: 'タグマスタ', caption: '登録済み' },
+  { label: 'スコアマスタ', caption: '登録済み' }
 ];
 
   return (
     <div className="app-shell">
       <div className="page-header">
         <div className="page-title">
-          <p className="eyebrow">AI Targeting Platform</p>
-          <h1>Signal Ops Studio</h1>
+          <p className="eyebrow">レベニュープロセス基盤</p>
+          <h1>AI Targeting Platform</h1>
           <p className="lede">
-            タグ/スコアの発見から管理までをひとつの画面で。フィルタを変えながら素早く判断できるよう、必要な導線だけを残したレイアウトに整えました。
+            AIが顧客データから見つけたタグ/スコアを登録して、当てはまる企業をリストアップしましょう。
           </p>
         </div>
         <div className="hero-metrics">
@@ -906,7 +937,7 @@ const quickStats = [
             const count =
               item.label === '候補'
                 ? candidates.length
-                : item.label === 'タグマスター'
+                : item.label === 'タグマスタ'
                 ? tagDefinitions.length
                 : scoreDefinitions.length;
             const display = count ? `${count}件` : '--';

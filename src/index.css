@@ -253,6 +253,10 @@ button:disabled {
   gap: 1.25rem;
 }
 
+.table-wrapper.candidates-grid {
+  grid-template-columns: 760px minmax(320px, 1fr);
+}
+
 @media (max-width: 960px) {
   .table-wrapper {
     grid-template-columns: 1fr;
